@@ -1,6 +1,6 @@
 # CmdRoster
 
-**CmdRoster** is a small **command-line and script management** tool for **zsh on macOS**. Register shell snippets or scripts once, then pick them with **fzf** — the chosen command is placed on your command line (not executed automatically).
+**CmdRoster** is a small **command-line and script management** tool for **zsh on macOS**. Register shell snippets or scripts once, then pick them with **fzf** — the chosen command is appended to your **zsh history** (and thus `HISTFILE` when enabled). Press **↑** (previous line) or **Ctrl+R** to recall it; nothing is executed until you press **Enter**.
 
 The interactive command is still named **`luo`** (three letters, easy to type). Data lives under **`~/.luo/`** by default (`LUO_HOME`).
 
@@ -49,23 +49,20 @@ If `LUO_HOME` is not the default `~/.luo`, the installer adds `export LUO_HOME=�
 luo add "caffeinate -di"       # register a shell command
 luo add ./my-script.sh         # register a script (symlink under ~/.luo/scripts/)
 luo add -n wake "caffeinate -di"   # custom name
-luo help                       # fuzzy-find; Enter fills the line buffer
+luo help                       # fuzzy-find; Enter appends choice to history (↑ to recall)
 ```
 
 In `luo help`, press **Fn+F2** to toggle **delete mode** (green UI). In delete mode, **Enter** removes the selected entry. Press **Fn+F2** again to leave delete mode.
 
-### Command-line fill (some terminals)
+### How `luo help` applies your choice
 
-After you pick an entry, **CmdRoster** writes the command with zsh `print -z` (ZLE buffer). Some terminals (especially right after **fzf** exits) drop the buffer if that runs too early, so the implementation **defers** the write with `zsh/sched` until the current `luo help` call has finished.
-
-- If you still see nothing on the line, try **`export LUO_PRINTZ=immediate`** (writes immediately; may work better in a few setups, worse in others).
-- If ZLE is not active (non-interactive / embedded shell), on **macOS** the command is copied with **`pbcopy`** and a short message is printed to stderr.
+Picking uses zsh **`print -s`**: the command becomes the **latest history event** in memory and is written to **`HISTFILE`** according to your options (`INC_APPEND_HISTORY`, `SHARE_HISTORY`, etc.). This avoids `print -z` / ZLE quirks across terminals.
 
 ## Commands
 
 | Command | Description |
 |---------|-------------|
-| `luo help` | fzf UI (sorted by name); **Tab** fills the query with the current name; **Enter** puts the command on the line; **Fn+F2** toggles delete mode; **Ctrl+N** / **Esc** quit |
+| `luo help` | fzf UI (sorted by name); **Tab** fills the query with the current name; **Enter** appends the command to **zsh history** (↑ / Ctrl+R to recall); **Fn+F2** toggles delete mode; **Ctrl+N** / **Esc** quit |
 | `luo add [options] …` | Register a command or script (see below) |
 | `luo list` | Print the registry (TSV with header) |
 | `luo sync [-p]` | Merge missing `scripts/` entries; `-p` prunes stale `file` rows |

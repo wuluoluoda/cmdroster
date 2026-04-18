@@ -99,7 +99,7 @@ cat <<EOF
 
 ▶  快速上手：
      luo add "caffeinate -di"    # 登记一条 shell 命令
-     luo help                    # fzf 选命令填入命令行
+     luo help                    # fzf 选命令 → 记入历史 (↑ 调出)
      luo add ./你的脚本.sh       # 登记一个脚本
 
 EOF

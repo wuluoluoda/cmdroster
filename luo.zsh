@@ -5,7 +5,7 @@
 # Registry: $LUO_HOME/registry.tsv — tab-separated, UTF-8:
 #   name	description	kind	payload
 # kind: file → payload 为相对 LUO_HOME 的路径（如 scripts/foo.sh）
-# kind: shell → payload 为填入命令行的整段 shell 命令（勿含 Tab）
+# kind: shell → payload 为整段 shell 命令（由 luo help 记入 zsh 历史后调出；勿含 Tab）
 
 _luo_home() {
   print -r -- "${LUO_HOME:-$HOME/.luo}"
@@ -143,7 +143,7 @@ _luo_usage() {
   print -r -- "用法:
   luo help          交互选择（名称字母序；Tab 用当前项名称填搜索框缩小范围）
                     按 Fn+F2（笔记本常见：须 Fn 才发出 F2）进入/退出「删除模式」（界面为绿色）；删除模式下 Enter 直接删当前项。
-                    每次在普通模式下用 Enter 填入命令行会为该登记名累计使用次数（见 usage.tsv）；
+                    每次在普通模式下用 Enter 会把命令写入 zsh 历史（↑ / Ctrl+R 调出），并累计使用次数（见 usage.tsv）；
                     删除前若次数 >30 会交互确认（非交互终端则拒绝删除）。
   luo list          按名字母序列出（同样会先补全）
   luo add [选项] <一段文本…>  导入一条入口（见下方判定规则）
@@ -156,7 +156,7 @@ _luo_usage() {
 luo add 判定（剩余参数会拼成一段字符串，外层引号会剥掉一层）:
   · 若看起来像「脚本路径」且磁盘上存在该普通文件 → kind=file：在 scripts/ 建符号链接并登记
     条件：路径含 \"/\"，或以 \"./\" \"../\" 开头，且 [[ -f 解析后路径 ]]
-  · 否则 → kind=shell：整段字符串作为命令（填入命令行），不建链接
+  · 否则 → kind=shell：整段字符串作为命令（由 luo help 记入历史后调出），不建链接
 
   无 \"/\" 的相对脚本请写成 ./foo.sh 再 luo add。
 
@@ -555,53 +555,17 @@ _luo_add() {
   print -r -- "已登记命令(shell): $dest_name"
 }
 
-# fzf 退出后立刻 print -z 在部分终端会失效；延后到当前命令结束后写入 ZLE 缓冲。
-# 仍失败时（无 ZLE / 非 TTY）：macOS 用 pbcopy，否则打印到 stderr 供手动复制。
-typeset -g Luo_ZpickTmp
-
-_luo_finalize_pick_line() {
+# 选中后写入 zsh 历史（print -s），由 HISTFILE 持久化；用户按 ↑ 或 Ctrl+R 调出再执行。
+# 不依赖 print -z / ZLE 缓冲，各终端表现一致。
+_luo_commit_pick_command() {
   local text=$1
-  zmodload zsh/zle 2>/dev/null
-  if [[ -o interactive ]] && [[ -o zle ]] && [[ -t 0 ]]; then
-    print -z -- "$text"
-    return 0
+  if [[ ! -o interactive ]]; then
+    print -u2 "luo: 非交互 shell，无法记入历史。命令为：" >&2
+    print -r -- "$text"
+    return 1
   fi
-  if [[ "$(uname -s)" == Darwin ]] && command -v pbcopy >/dev/null 2>&1; then
-    print -rn -- "$text" | command pbcopy
-    print -u2 "luo: 已复制到剪贴板（当前终端无法直接写入命令行）。"
-    return 0
-  fi
-  print -u2 "luo: 请手动复制以下命令：" >&2
-  print -r -- "$text"
-}
-
-_luo_sched_apply_zpick() {
-  emulate -L zsh
-  local f=$Luo_ZpickTmp text
-  unset Luo_ZpickTmp
-  [[ -n $f && -f $f ]] || return 0
-  text=$(<$f)
-  command rm -f -- "$f"
-  _luo_finalize_pick_line "$text"
-}
-
-_luo_queue_printz() {
-  local text=$1 f
-  if [[ ${LUO_PRINTZ:-defer} == immediate ]]; then
-    _luo_finalize_pick_line "$text"
-    return
-  fi
-  if ! zmodload zsh/sched 2>/dev/null; then
-    _luo_finalize_pick_line "$text"
-    return
-  fi
-  f=$(mktemp "${TMPDIR:-/tmp}/luo-zpick.XXXXXX") || {
-    _luo_finalize_pick_line "$text"
-    return
-  }
-  print -r -- "$text" >"$f"
-  Luo_ZpickTmp=$f
-  sched +0 _luo_sched_apply_zpick
+  print -s -- "$text"
+  print -u2 "luo: 已写入 zsh 历史（↑ 或 Ctrl+R 调出后回车执行）。"
 }
 
 _luo_pick() {
@@ -622,7 +586,7 @@ _luo_pick() {
       pr=$'\e[1;32mDEL>\e[0m '
       color='prompt:#00cc00,pointer:#00ff00,fg+:#ccffcc,border:#00aa00'
     else
-      hdr=$'Tab 缩小 | Enter 填入命令行 | \e[33mFn+F2\e[0m 删除模式（绿色）| Ctrl+N / Esc 退出'
+      hdr=$'Tab 缩小 | Enter 写入历史 (↑/Ctrl+R 调出) | \e[33mFn+F2\e[0m 删除模式（绿色）| Ctrl+N / Esc 退出'
       pr='> '
       color=
     fi
@@ -679,7 +643,7 @@ _luo_pick() {
 
     if [[ $kind == shell ]]; then
       _luo_usage_incr "$name"
-      _luo_queue_printz "$payload"
+      _luo_commit_pick_command "$payload"
       return 0
     fi
 
@@ -699,7 +663,7 @@ _luo_pick() {
       cmd="zsh ${(q)fullpath}"
     fi
     _luo_usage_incr "$name"
-    _luo_queue_printz "$cmd"
+    _luo_commit_pick_command "$cmd"
     return 0
   done
 }
