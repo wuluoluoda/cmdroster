@@ -132,6 +132,81 @@ _luo_usage_remove_name() {
   command mv -f "$tmp" "$f"
 }
 
+_luo_alias_file() {
+  print -r -- "$(_luo_home)/alias"
+}
+
+# 读取 alias 文件并定义（或撤销）快捷函数；source 时与 luo alias 变更后均调用
+_luo_alias_load() {
+  local f name
+  f=$(_luo_alias_file)
+  # 先撤销上一次设置的函数（避免改名后旧函数残留）
+  if [[ -n ${_LUO_CURRENT_ALIAS:-} ]]; then
+    unfunction "${_LUO_CURRENT_ALIAS}" 2>/dev/null || :
+    unset _LUO_CURRENT_ALIAS
+  fi
+  [[ -f $f ]] || return 0
+  IFS= read -r name <"$f"
+  name=${name//[[:space:]]/}
+  [[ -n $name ]] || return 0
+  # 定义同名 zsh 函数，调用 luo help
+  eval "${name}() { luo help \"\$@\"; }"
+  typeset -g _LUO_CURRENT_ALIAS=$name
+}
+
+_luo_alias_cmd() {
+  local name=${1:-} f
+  f=$(_luo_alias_file)
+  _luo_init_files
+
+  # 无参数：显示当前状态
+  if [[ -z $name ]]; then
+    if [[ -n ${_LUO_CURRENT_ALIAS:-} ]]; then
+      print -r -- "当前快捷命令: ${_LUO_CURRENT_ALIAS}  （等同于 luo help）"
+    else
+      print -r -- "未设置快捷命令。用法: luo alias <命令名>  例: luo alias pp"
+    fi
+    return 0
+  fi
+
+  # 取消
+  if [[ $name == off || $name == - || $name == --unset ]]; then
+    if [[ -n ${_LUO_CURRENT_ALIAS:-} ]]; then
+      local old=$_LUO_CURRENT_ALIAS
+      unfunction "$old" 2>/dev/null || :
+      unset _LUO_CURRENT_ALIAS
+      command rm -f "$f"
+      print -r -- "luo: 已取消快捷命令 '${old}'。"
+    else
+      command rm -f "$f"
+      print -r -- "luo: 没有设置过快捷命令。"
+    fi
+    return 0
+  fi
+
+  # 基本格式校验
+  if [[ $name == *[[:space:]]* || $name == */* || $name == -* ]]; then
+    print -u2 "luo alias: 命令名不能含空格、斜杠或以 - 开头: $name"
+    return 1
+  fi
+
+  # 与系统命令冲突时警告（luo / builtin 本身除外）
+  if [[ $name != luo ]] && command -v "$name" >/dev/null 2>&1; then
+    print -u2 "luo alias: 警告：'$name' 已是系统中存在的命令。"
+    if [[ -t 0 ]]; then
+      read -q "?仍要覆盖？[y/N] " || { print ""; return 1; }
+      print ""
+    else
+      print -u2 "luo alias: 非交互终端，跳过覆盖。"
+      return 1
+    fi
+  fi
+
+  print -r -- "$name" >"$f"
+  _luo_alias_load
+  print -r -- "luo: 快捷命令已设为 '${name}'（新终端自动生效，当前终端已即时生效）。"
+}
+
 _luo_require_fzf() {
   if ! command -v fzf >/dev/null 2>&1; then
     print -u2 "luo: 需要安装 fzf（例如: brew install fzf）"
@@ -143,12 +218,13 @@ _luo_usage() {
   print -r -- "用法:
   luo help          交互选择（名称字母序；Tab 用当前项名称填搜索框缩小范围）
                     按 Fn+F2（笔记本常见：须 Fn 才发出 F2）进入/退出「删除模式」（界面为绿色）；删除模式下 Enter 直接删当前项。
-                    每次在普通模式下用 Enter 会把命令写入 zsh 历史（↑ / Ctrl+R 调出），并累计使用次数（见 usage.tsv）；
+                    每次在普通模式下用 Enter 将命令填入命令行，并累计使用次数（见 usage.tsv）；
                     删除前若次数 >30 会交互确认（非交互终端则拒绝删除）。
   luo list          按名字母序列出（同样会先补全）
   luo add [选项] <一段文本…>  导入一条入口（见下方判定规则）
   luo sync [-p]     扫描 scripts/ 补全缺失；-p 删除失效 file 表项
   luo rm / remove   直接进入 luo help 且初始为删除模式（不接受其它参数）
+  luo alias [名字]  设置 luo help 的快捷命令（如 pp）；luo alias 查看；luo alias off 取消
   luo home          打印 LUO_HOME
 
 命令行补全（zsh）：子命令名等（补全函数 _luo_cmd_complete）。~/.zshrc 须先 compinit 再 source 本文件；见文件末尾 precmd 兜底注册。
@@ -708,6 +784,10 @@ luo() {
       LUO_DELETE_START=1
       _luo_pick
       ;;
+    alias)
+      shift
+      _luo_alias_cmd "$@"
+      ;;
     home)
       _luo_home
       ;;
@@ -728,7 +808,7 @@ _luo_cmd_complete() {
   local sub
 
   if (( CURRENT == 2 )); then
-    compadd help list add sync remove rm home pick
+    compadd help list add sync remove rm alias home pick
     return
   fi
 
@@ -772,3 +852,6 @@ fi
 # 若 zshrc 里先 source 本文件、后 compinit，第一次执行 luo 时再注册一次
 # unfunction 在目标不存在时返回非 0，会导致「source 本文件」整体退出码为 1
 unfunction _luo 2>/dev/null || :
+
+# source 时自动加载用户设置的快捷命令
+_luo_alias_load
