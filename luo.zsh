@@ -614,7 +614,8 @@ _luo_pick() {
       continue
     fi
 
-    line=${fl[1]}
+    # --expect 模式下：fl[1]=按键名（Enter时为空），fl[2]=选中行
+    line=${fl[2]}
     [[ -n $line ]] || return 0
 
     IFS=$'\t' read -r name desc kind payload <<<"$line"
