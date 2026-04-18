@@ -1,4 +1,4 @@
-# luo — personal script hub for zsh
+# CmdRoster (luo) — command-line & script hub for zsh
 # Usage: add to ~/.zshrc
 #   source "${LUO_HOME:-$HOME/.luo}/luo.zsh"
 #

@@ -1,6 +1,8 @@
-# Luo
+# CmdRoster
 
-**Luo** is a small command-line and script management tool for **zsh on macOS**. Register shell snippets or scripts once, then pick them with **fzf** via `luo help` — the chosen command is placed on your command line (not executed automatically).
+**CmdRoster** is a small **command-line and script management** tool for **zsh on macOS**. Register shell snippets or scripts once, then pick them with **fzf** — the chosen command is placed on your command line (not executed automatically).
+
+The interactive command is still named **`luo`** (three letters, easy to type). Data lives under **`~/.luo/`** by default (`LUO_HOME`).
 
 ## Requirements
 
@@ -14,7 +16,7 @@
 ### One-liner (recommended)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/wuluoluoda/luo/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/wuluoluoda/cmdroster/main/install.sh | bash
 ```
 
 The installer can offer to install **fzf** via Homebrew if it is missing.
@@ -22,8 +24,8 @@ The installer can offer to install **fzf** via Homebrew if it is missing.
 ### Clone and install
 
 ```bash
-git clone https://github.com/wuluoluoda/luo.git
-cd luo
+git clone https://github.com/wuluoluoda/cmdroster.git
+cd cmdroster
 ./install.sh
 ```
 

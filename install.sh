@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # luo — 一键安装脚本
 # 用法（克隆后）: ./install.sh
-# curl: curl -fsSL https://raw.githubusercontent.com/wuluoluoda/luo/main/install.sh | bash
+# curl: curl -fsSL https://raw.githubusercontent.com/wuluoluoda/cmdroster/main/install.sh | bash
 set -euo pipefail
 
-GITHUB_RAW="https://raw.githubusercontent.com/wuluoluoda/luo/main"
+GITHUB_RAW="https://raw.githubusercontent.com/wuluoluoda/cmdroster/main"
 
 DEST="${LUO_HOME:-$HOME/.luo}"
 MARK_BEGIN="# >>> luo script hub"
