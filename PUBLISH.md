@@ -10,7 +10,7 @@ Your local repo is ready under this folder (its own `.git` on `main`).
 
 ```bash
 cd /path/to/cmdroster   # this directory (contains install.sh)
-git remote add origin https://github.com/wuluoluoda/cmdroster.git
+git remote add origin git@github.com:wuluoluoda/cmdroster.git
 git branch -M main
 git push -u origin main
 ```
