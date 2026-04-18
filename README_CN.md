@@ -1,188 +1,182 @@
-# CmdRoster 中文说明
+# CmdRoster (luo)
 
-**CmdRoster** 是一个面向 **macOS zsh** 的个人命令与脚本管理工具。把常用的 shell 片段或脚本登记一次，之后随时用 **fzf** 交互搜索，回车后命令直接出现在命令行上，确认无误再按 Enter 执行。
+> 命令行 & 脚本管理工具——把任意 shell 命令或脚本注册一次，随时通过模糊搜索秒找秒用。
 
-命令行工具名叫 **`luo`**（三个字母，好打）。数据默认存放在 **`~/.luo/`**（可通过 `LUO_HOME` 自定义）。
-
-> English documentation: [README.md](README.md)
+[English](README.md)
 
 ## 平台支持
 
-| 平台 | 状态 |
-|------|------|
-| macOS | ✅ 完整支持 |
-| Windows（WSL 2）| ✅ 完整支持 |
-| Linux（原生）| ✅ 完整支持 |
-| Windows（原生 PowerShell / CMD）| ❌ 暂不支持 |
+| 平台 | Shell | 对应版本 |
+|------|-------|---------|
+| macOS | **zsh** | `zsh/` |
+| Linux（原生） | **zsh** | `zsh/` |
+| Windows（WSL 2） | **zsh** | `zsh/` |
+| Windows（PowerShell） | **pwsh** | `pwsh/` |
+| Linux / macOS（PowerShell Core） | **pwsh** | `pwsh/` |
 
-**Windows 用户**：通过 **WSL 2**（Windows 的 Linux 子系统）使用，详见下方 [Windows WSL 2 安装步骤](#windows-wsl-2)。
+仓库提供 **两个独立版本**，分别位于 `zsh/` 和 `pwsh/` 目录。  
+两个版本共用相同的 TSV registry 格式，可共享同一个 `~/.luo/` 数据目录。
 
-## 依赖
+---
 
-| 工具 | 安装方式 |
-|------|---------|
-| zsh | macOS 自带；Linux/WSL：`sudo apt-get install zsh` |
-| [fzf](https://github.com/junegunn/fzf) | macOS：`brew install fzf`；Linux/WSL：`sudo apt-get install fzf` |
+## 安装 — macOS / Linux / WSL 2（zsh 版）
 
-## 安装
-
-### 一行命令安装（推荐）
+### 一行命令安装（无需克隆仓库）
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/wuluoluoda/cmdroster/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/wuluoluoda/cmdroster/main/zsh/install.sh | bash
 ```
 
-安装脚本会自动检测操作系统，并在 fzf 未安装时使用对应的包管理器自动安装（macOS 用 `brew`，Linux/WSL 用 `apt-get` / `pacman` / `dnf` / `yum` 等）。
+安装脚本自动检测系统并安装 **fzf**（macOS 用 `brew`，Linux/WSL 用 `apt-get / pacman / dnf / yum`）。
 
 ### 克隆后安装
 
 ```bash
 git clone https://github.com/wuluoluoda/cmdroster.git
 cd cmdroster
-./install.sh
+./zsh/install.sh
 ```
 
-安装完成后，在**当前终端**执行一行激活（新开终端会从 `~/.zshrc` 自动加载）：
+安装完成后，在**当前终端**执行以下命令立刻激活（新终端会从 `~/.zshrc` 自动加载）：
 
 ```bash
 source ~/.luo/luo.zsh
 ```
 
-### 自定义安装目录
+### WSL 2 初次安装
 
-```bash
-LUO_HOME=~/my-tools ./install.sh
+```powershell
+# PowerShell（管理员）——安装 WSL 2 + Ubuntu
+wsl --install
 ```
 
-若 `LUO_HOME` 不是默认的 `~/.luo`，安装脚本会在 `~/.zshrc` 里写入 `export LUO_HOME=…`。
+```bash
+# Ubuntu 终端中
+sudo apt-get update && sudo apt-get install -y zsh fzf
+chsh -s $(which zsh)   # 把 zsh 设为默认 Shell
+curl -fsSL https://raw.githubusercontent.com/wuluoluoda/cmdroster/main/zsh/install.sh | bash
+```
 
-### Windows（WSL 2）
+---
 
-1. 在 **PowerShell（管理员）** 里安装 WSL 2 和 Ubuntu：
+## 安装 — Windows / 跨平台（PowerShell 版）
 
-   ```powershell
-   wsl --install
-   ```
+需要 **Windows PowerShell 5.1+**（Windows 内置）或 **PowerShell Core 7+**（跨平台）。
 
-2. 打开 **Windows Terminal** 里的 Ubuntu 标签，安装 zsh 并运行一键安装：
+### 一行命令安装 — Windows（无需克隆仓库）
 
-   ```bash
-   sudo apt-get update && sudo apt-get install -y zsh
-   chsh -s $(which zsh)      # 把 zsh 设为默认 Shell
-   curl -fsSL https://raw.githubusercontent.com/wuluoluoda/cmdroster/main/install.sh | bash
-   ```
+```powershell
+irm https://raw.githubusercontent.com/wuluoluoda/cmdroster/main/pwsh/install.ps1 | iex
+```
 
-3. 重新打开一个 Windows Terminal Ubuntu 标签，`luo` 即可使用。
+### 一行命令安装 — Linux / macOS（已安装 pwsh）
 
-> **提示**：Windows Terminal 默认支持 256 色，fzf 界面显示正常；若使用老版终端（ConHost）可能颜色不完整。
+```bash
+curl -fsSL https://raw.githubusercontent.com/wuluoluoda/cmdroster/main/pwsh/install.ps1 | pwsh
+```
+
+### 克隆后安装
+
+```powershell
+git clone https://github.com/wuluoluoda/cmdroster.git
+cd cmdroster
+./pwsh/install.ps1
+```
+
+安装脚本自动安装 **fzf**（Windows 依次尝试 `winget → scoop → choco`，macOS 用 `brew`，Linux 用 `apt-get / pacman / dnf`）。
+
+安装完成后，在**当前会话**执行以下命令立刻激活（新终端会从 `$PROFILE` 自动加载）：
+
+```powershell
+. "$HOME/.luo/luo.ps1"
+```
+
+---
 
 ## 快速上手
 
 ```bash
-# 登记一条 shell 命令
-luo add "caffeinate -di"
-
-# 登记一个脚本（在 ~/.luo/scripts/ 下建软链接）
-luo add ./my-script.sh
-
-# 给条目起一个好记的名字
-luo add -n wake "caffeinate -di"
-
-# 打开交互选择菜单，回车后命令出现在命令行
-luo help
-
-# 设置一个更短的快捷命令（例如 ql），以后直接 ql 即可
-luo alias ql
-ql
+luo add "ping -c 4 google.com"   # 登记一条 shell 命令
+luo add ./deploy.sh               # 登记一个本地脚本
+luo help                          # fzf 选命令，Enter 后命令出现在命令行
+luo alias ql                      # 把 ql 设为 luo help 的快捷方式
 ```
+
+PowerShell 版专属：按 **Ctrl+Shift+L** 直接弹出 fzf，选中后命令直接注入命令行（最佳体验）。
+
+---
 
 ## 命令一览
 
 | 命令 | 说明 |
 |------|------|
-| `luo help` | fzf 交互菜单（字母序）；**Tab** 用当前名称缩小搜索范围；**Enter** 把命令填到命令行（可编辑后再回车执行）；**Fn+F2** 切换删除模式（绿色界面，Enter 直接删当前项）；**Ctrl+N** / **Esc** 退出 |
-| `luo add [选项] …` | 登记命令或脚本（见下文） |
-| `luo list` | 打印全部条目（带表头的 TSV） |
-| `luo sync [-p]` | 扫描 `scripts/` 补全缺失条目；`-p` 同时清理失效行 |
-| `luo rm` / `luo remove` | 等同于 `luo help` 但直接进入删除模式 |
-| `luo alias [名字]` | 设置 / 查看 / 取消 `luo help` 的快捷命令（见下文） |
-| `luo home` | 打印当前 `LUO_HOME` |
-
-### luo add 选项
-
-| 选项 | 说明 |
-|------|------|
-| `-n <名称>` | 自定义显示名称（默认取命令的第一个词或脚本的文件名） |
-| `-d <简介>` | 自定义简介（脚本文件内可写 `# luo:desc …` 自动读取） |
-| `-f` | 强制覆盖同名条目 |
-
-**自动判定规则**：参数含 `/` 或以 `./` `../` 开头且文件存在 → 按**脚本**处理，在 `~/.luo/scripts/` 下建软链接；否则整段字符串视为 **shell 命令**。
-
-```bash
-luo add "npm run dev"               # shell 命令
-luo add -n dev "npm run dev"        # 自定义名称
-luo add ./build.sh                  # 脚本（建软链接）
-luo add ~/bin/deploy.sh             # 绝对路径脚本
-luo add -f "npm run dev"            # 强制覆盖同名条目
-```
-
-### luo alias — 设置快捷命令
-
-不想每次输 `luo help`？给它起个任意不冲突的短名字：
-
-```bash
-luo alias ql        # 把 "ql" 设为 luo help 的快捷方式
-ql                  # 直接打开交互菜单
-
-luo alias           # 查看当前设置的快捷命令
-luo alias off       # 取消快捷命令
-```
-
-快捷命令名保存在 `~/.luo/alias`，每次 `source luo.zsh` 时自动读取并定义对应函数，**新开终端无需任何额外操作**。改名时旧函数自动清理，不会残留。
-
-> **注意**：若命令名与系统命令冲突，会警告并要求确认后再设置。
-
-### luo help 如何把命令填到命令行
-
-选中后，命令通过 `print -z` 写入 **ZLE 行编辑缓冲**（在 `precmd` 钩子里调用，确保 fzf 已彻底退出、终端状态已还原）。命令出现在提示符后，你可以修改，确认无误再按 **Enter** 执行。
+| `luo help` | 交互式模糊选择（fzf），Enter 将命令放到命令行 |
+| `luo list` | 打印所有已登记的条目 |
+| `luo add [-n 名称] [-d 简介] [-f] <文本>` | 登记一条 shell 命令或脚本路径 |
+| `luo sync [-p]` | 扫描 `scripts/` 补全缺失条目；`-p` 删除失效的 file 条目 |
+| `luo rm` / `luo remove` | 直接进入**删除模式**（绿色界面），Enter 删除选中条目 |
+| `luo alias [名字]` | 设置 `luo help` 的快捷命令；`luo alias off` 取消 |
+| `luo home` | 打印 `LUO_HOME` |
 
 ### 删除模式
 
-在 `luo help` 界面按 **Fn+F2**（Mac 笔记本 F 行默认为媒体键，需 Fn）进入绿色的删除模式：
+在 fzf 界面按 **Fn+F2**（zsh 版）或 **F2**（pwsh 版）切换删除模式（绿色界面）。  
+已使用超过 30 次的条目删除前会交互确认。
 
-- **Enter** — 删除当前选中条目（`kind=file` 时同时删除 `scripts/` 下的软链接）
-- 使用次数 **> 30** 的条目删除前会提示确认
-- 再按 **Fn+F2** 退出删除模式，回到普通模式
+### luo alias — luo help 的快捷方式
 
-也可直接 `luo rm` 打开菜单并自动进入删除模式。
+```bash
+luo alias ql       # 把 ql 设为 luo help 的快捷命令
+ql                 # 等同于 luo help
+luo alias          # 查看当前快捷命令
+luo alias off      # 取消快捷命令
+```
+
+别名名称保存在 `~/.luo/alias`，每次新开终端自动加载。
+
+### luo help 如何把命令放到命令行
+
+**zsh 版**：借助 `precmd` 钩子，fzf 退出后终端状态还原完毕时再执行 `print -z`，稳定可靠。
+
+**pwsh 版**：在 prompt 函数中包装一帧，让 `PSConsoleReadLine::Insert()` 在 PSReadLine 就绪时触发。快捷键 `Ctrl+Shift+L` 始终稳定注入。
+
+---
+
+## 自定义安装目录
+
+```bash
+LUO_HOME=~/my-luo ./zsh/install.sh     # zsh 版
+LUO_HOME=~/my-luo ./pwsh/install.ps1   # pwsh 版
+```
+
+---
 
 ## 目录结构
 
 ```
-~/.luo/
-├── luo.zsh          # 主逻辑（由 install.sh 安装/更新）
-├── registry.tsv     # 条目数据库（制表符分隔，UTF-8）
-├── usage.tsv        # 各条目使用次数（超过 30 次删除时提示确认）
-├── alias            # 快捷命令名（一行纯文本，由 luo alias 写入）
-└── scripts/         # 已登记脚本的软链接目录
+cmdroster/
+├── zsh/
+│   ├── luo.zsh            # zsh 版（macOS / Linux / WSL 2）
+│   ├── install.sh         # bash 安装脚本
+│   └── registry.tsv.example
+├── pwsh/
+│   ├── luo.ps1            # PowerShell 版（Windows / Linux / macOS）
+│   ├── install.ps1        # PowerShell 安装脚本
+│   └── registry.tsv.example
+├── README.md
+├── README_CN.md
+└── LICENSE
+
+~/.luo/                    # 默认 LUO_HOME（zsh 与 pwsh 可共用）
+├── luo.zsh  或  luo.ps1
+├── registry.tsv           # name / description / kind / payload
+├── usage.tsv              # 每条命令的使用次数
+├── alias                  # 当前快捷命令名
+└── scripts/               # 托管的脚本与符号链接
 ```
 
-注册表列：`name`、`description`、`kind`（`shell` | `file`）、`payload`。
+---
 
-## Tab 补全
+## 许可证
 
-`luo.zsh` 用 `compdef _luo_cmd_complete luo` 注册补全。需确保 `~/.zshrc` 中 **`compinit` 在 `source luo.zsh` 之前执行**，否则补全不生效。
-
-## 卸载
-
-```bash
-rm -rf ~/.luo
-
-# 同时从 ~/.zshrc 中删除以下两行标记之间的配置块：
-# >>> luo script hub
-# <<< luo script hub
-```
-
-## License
-
-MIT — 详见 [LICENSE](LICENSE)。
+MIT © [wuluoluoda](https://github.com/wuluoluoda)

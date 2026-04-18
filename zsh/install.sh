@@ -5,7 +5,7 @@
 # curl  : curl -fsSL https://raw.githubusercontent.com/wuluoluoda/cmdroster/main/install.sh | bash
 set -euo pipefail
 
-GITHUB_RAW="https://raw.githubusercontent.com/wuluoluoda/cmdroster/main"
+GITHUB_RAW="https://raw.githubusercontent.com/wuluoluoda/cmdroster/main/zsh"
 DEST="${LUO_HOME:-$HOME/.luo}"
 MARK_BEGIN="# >>> luo script hub"
 MARK_END="# <<< luo script hub"

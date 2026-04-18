@@ -1,159 +1,184 @@
-# CmdRoster
+# CmdRoster (luo)
 
-**CmdRoster** is a small **command-line and script management** tool for **zsh on macOS**. Register shell snippets or scripts once, then pick them with **fzf** — the chosen command is placed on your **command line** ready to review and execute.
+> A command-line & script hub for your terminal — register any shell command or script once, then recall it instantly with fuzzy search.
 
-The interactive command is named **`luo`** (three letters, easy to type). Data lives under **`~/.luo/`** by default (`LUO_HOME`).
-
-> 中文说明见 [README_CN.md](README_CN.md)
+[中文文档](README_CN.md)
 
 ## Platform support
 
-| Platform | Status |
-|----------|--------|
-| macOS | ✅ Full support |
-| Windows (WSL 2) | ✅ Full support |
-| Linux (native) | ✅ Full support |
-| Windows (native PowerShell / CMD) | ❌ Not supported |
+| Platform | Shell | Version |
+|----------|-------|---------|
+| macOS | **zsh** | `zsh/` |
+| Linux (native) | **zsh** | `zsh/` |
+| Windows (WSL 2) | **zsh** | `zsh/` |
+| Windows (PowerShell) | **pwsh** | `pwsh/` |
+| Linux / macOS (PowerShell Core) | **pwsh** | `pwsh/` |
 
-**Windows users**: install via **WSL 2** (Windows Subsystem for Linux). See the [WSL install guide](#windows-wsl-2) below.
+The repo ships **two independent versions** under `zsh/` and `pwsh/`.  
+They share the same TSV registry format so you can keep one `~/.luo/` folder across both shells.
 
-## Requirements
+---
 
-| Tool | Install |
-|------|---------|
-| zsh | macOS built-in · Linux/WSL: `sudo apt-get install zsh` |
-| [fzf](https://github.com/junegunn/fzf) | macOS: `brew install fzf` · Linux/WSL: `sudo apt-get install fzf` |
+## Install — macOS / Linux / WSL 2 (zsh)
 
-## Install
-
-### One-liner (recommended)
+### One-liner (no clone needed)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/wuluoluoda/cmdroster/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/wuluoluoda/cmdroster/main/zsh/install.sh | bash
 ```
 
-The installer auto-detects your OS and installs **fzf** via the right package manager if missing (`brew` on macOS, `apt-get` / `pacman` / `dnf` / `yum` on Linux/WSL).
+The installer auto-detects the OS and installs **fzf** if missing  
+(`brew` on macOS · `apt-get / pacman / dnf / yum` on Linux / WSL 2).
 
-### Clone and install
+### After cloning
 
 ```bash
 git clone https://github.com/wuluoluoda/cmdroster.git
 cd cmdroster
-./install.sh
+./zsh/install.sh
 ```
 
-Activate in the **current** terminal (new shells load it from `~/.zshrc` automatically):
+Activate in the **current** terminal (new shells load from `~/.zshrc` automatically):
 
 ```bash
 source ~/.luo/luo.zsh
 ```
 
-### Custom install directory
+### WSL 2 — first-time setup
 
-```bash
-LUO_HOME=~/my-tools ./install.sh
+```powershell
+# In PowerShell (Admin) — install WSL 2 with Ubuntu
+wsl --install
 ```
 
-If `LUO_HOME` is not the default `~/.luo`, the installer adds `export LUO_HOME=…` to `~/.zshrc`.
+```bash
+# In Ubuntu terminal
+sudo apt-get update && sudo apt-get install -y zsh fzf
+chsh -s $(which zsh)   # set zsh as default shell
+curl -fsSL https://raw.githubusercontent.com/wuluoluoda/cmdroster/main/zsh/install.sh | bash
+```
 
-### Windows (WSL 2)
+---
 
-1. Install WSL 2 and a distro (Ubuntu recommended):
+## Install — Windows / cross-platform (PowerShell)
 
-   ```powershell
-   # in PowerShell (Admin)
-   wsl --install
-   ```
+Requires **PowerShell 5.1+** (Windows built-in) or **PowerShell Core 7+** (cross-platform).
 
-2. Open **Ubuntu** (or your distro) from Windows Terminal, then install zsh and run the one-liner:
+### One-liner — Windows (no clone needed)
 
-   ```bash
-   sudo apt-get update && sudo apt-get install -y zsh
-   chsh -s $(which zsh)          # set zsh as default shell
-   curl -fsSL https://raw.githubusercontent.com/wuluoluoda/cmdroster/main/install.sh | bash
-   ```
+```powershell
+irm https://raw.githubusercontent.com/wuluoluoda/cmdroster/main/pwsh/install.ps1 | iex
+```
 
-3. Open a new **Windows Terminal** tab (with Ubuntu profile) — `luo` is ready.
+### One-liner — Linux / macOS with pwsh (no clone needed)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/wuluoluoda/cmdroster/main/pwsh/install.ps1 | pwsh
+```
+
+### After cloning
+
+```powershell
+git clone https://github.com/wuluoluoda/cmdroster.git
+cd cmdroster
+./pwsh/install.ps1
+```
+
+The installer auto-installs **fzf** if missing  
+(`winget → scoop → choco` on Windows · `brew` on macOS · `apt-get / pacman / dnf` on Linux).
+
+Activate in the **current** session (new sessions load from `$PROFILE` automatically):
+
+```powershell
+. "$HOME/.luo/luo.ps1"
+```
+
+---
 
 ## Quick start
 
 ```bash
-luo add "caffeinate -di"            # register a shell command
-luo add ./my-script.sh              # register a script (symlinked under ~/.luo/scripts/)
-luo add -n wake "caffeinate -di"    # custom display name
-luo help                            # open fuzzy picker; Enter puts the command on your line
-luo alias pp                        # set "pp" as a short alias for luo help
-pp                                  # same as luo help
+luo add "ping -c 4 google.com"   # register a shell command
+luo add ./deploy.sh               # register a local script
+luo help                          # fzf picker → Enter puts it on the command line
+luo alias ql                      # set 'ql' as a short alias for luo help
 ```
+
+PowerShell bonus: press **Ctrl+Shift+L** to open the picker directly in the readline buffer.
+
+---
 
 ## Commands
 
 | Command | Description |
 |---------|-------------|
-| `luo help` | fzf picker (alphabetical); **Tab** narrows by name; **Enter** puts command on command line; **Fn+F2** toggles delete mode (green UI, **Enter** deletes); **Ctrl+N** / **Esc** quit |
-| `luo add [options] …` | Register a command or script (see below) |
-| `luo list` | Print the full registry (TSV with header) |
-| `luo sync [-p]` | Merge unregistered files under `scripts/`; `-p` also prunes stale rows |
-| `luo rm` / `luo remove` | Same as `luo help` but opens directly in delete mode |
-| `luo alias [name]` | Set / view / clear a short alias for `luo help` (see below) |
-| `luo home` | Print `LUO_HOME` |
+| `luo help` | Interactive fuzzy picker (fzf). Enter puts the command on the command line. |
+| `luo list` | Print all registered entries. |
+| `luo add [-n name] [-d desc] [-f] <text>` | Register a shell command or script path. |
+| `luo sync [-p]` | Scan `scripts/` and fill missing entries; `-p` removes stale file entries. |
+| `luo rm` / `luo remove` | Open picker in **delete mode** (green). Enter deletes the selected entry. |
+| `luo alias [name]` | Set a short alias for `luo help`; `luo alias off` to remove. |
+| `luo home` | Print `LUO_HOME`. |
 
-### `luo add` options
+### Delete mode
 
-| Option | Meaning |
-|--------|---------|
-| `-n <name>` | Display name (default: first word of command, or script basename) |
-| `-d <desc>` | Description (scripts can embed `# luo:desc …` to set this automatically) |
-| `-f` | Overwrite an existing entry with the same name |
+Press **Fn+F2** (zsh) or **F2** (pwsh) inside the picker to toggle delete mode (green UI).  
+Entries used more than 30 times prompt for confirmation before deletion.
 
-**Path detection**: if the argument contains `/` or starts with `./` / `../` and resolves to a file → registered as **file** (symlink created under `~/.luo/scripts/`). Otherwise the whole string is stored as a **shell** command.
-
-### `luo alias` — set a short alias for `luo help`
-
-Tired of typing `luo help`? Pick any short name that doesn't conflict with system commands:
+### luo alias — short alias for luo help
 
 ```bash
-luo alias ql        # define "ql" as a shortcut for luo help
-ql                  # opens the picker immediately
-
-luo alias           # show the current alias
-luo alias off       # remove the alias
+luo alias ql       # create 'ql' → calls luo help
+ql                 # same as luo help
+luo alias          # show current alias
+luo alias off      # remove alias
 ```
 
-The alias name is saved to `~/.luo/alias` and automatically restored every time `luo.zsh` is sourced (i.e., in every new terminal). Renaming automatically removes the old function.
+The alias name is saved to `~/.luo/alias` and reloaded on every new shell.
 
-> **Note**: if the name already exists as a system command, you will be warned before the alias is created.
+### How luo help puts a command on the command line
 
-### How `luo help` fills the command line
+**zsh version**: uses a `precmd` hook so `print -z` runs after fzf exits and the terminal state is clean.
 
-After you pick an entry, the command is written to the **ZLE line buffer** (`print -z`) inside a `precmd` hook — after fzf has fully exited and the terminal is restored — so it appears on your prompt ready to edit or run.
+**pwsh version**: wraps the `prompt` function for one tick so `PSConsoleReadLine::Insert()` fires when PSReadLine is ready. The key binding `Ctrl+Shift+L` always works inline.
 
-## Layout
+---
 
-```
-~/.luo/
-├── luo.zsh          # main logic (installed/updated by install.sh)
-├── registry.tsv     # entry database (tab-separated UTF-8)
-├── usage.tsv        # per-entry pick counts (triggers confirmation on delete if > 30)
-├── alias            # one-line file storing the current alias name (if set)
-└── scripts/         # symlinks to registered script files
-```
-
-Registry columns: `name`, `description`, `kind` (`shell` | `file`), `payload`.
-
-## Tab completion
-
-`luo.zsh` registers `_luo_cmd_complete` with `compdef`. Ensure **`compinit` runs before `source luo.zsh`** in `~/.zshrc` for subcommand completion to work.
-
-## Uninstall
+## Custom install directory
 
 ```bash
-rm -rf ~/.luo
-# Also remove the block in ~/.zshrc between:
-# >>> luo script hub
-# <<< luo script hub
+LUO_HOME=~/my-luo ./zsh/install.sh     # zsh
+LUO_HOME=~/my-luo ./pwsh/install.ps1   # pwsh
 ```
+
+---
+
+## Repository layout
+
+```
+cmdroster/
+├── zsh/
+│   ├── luo.zsh            # zsh version (macOS / Linux / WSL 2)
+│   ├── install.sh         # bash installer
+│   └── registry.tsv.example
+├── pwsh/
+│   ├── luo.ps1            # PowerShell version (Windows / Linux / macOS)
+│   ├── install.ps1        # PowerShell installer
+│   └── registry.tsv.example
+├── README.md
+├── README_CN.md
+└── LICENSE
+
+~/.luo/                    # default LUO_HOME (shared between zsh & pwsh)
+├── luo.zsh  or  luo.ps1
+├── registry.tsv           # name / description / kind / payload
+├── usage.tsv              # pick count per entry
+├── alias                  # current alias name
+└── scripts/               # managed scripts / symlinks
+```
+
+---
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT © [wuluoluoda](https://github.com/wuluoluoda)
