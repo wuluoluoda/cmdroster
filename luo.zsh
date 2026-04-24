@@ -5,7 +5,7 @@
 # Registry: $LUO_HOME/registry.tsv — tab-separated, UTF-8:
 #   name	description	kind	payload
 # kind: file → payload 为相对 LUO_HOME 的路径（如 scripts/foo.sh）
-# kind: shell → payload 为整段 shell 命令（由 luo help 记入 zsh 历史后调出；勿含 Tab）
+# kind: shell → payload 为整段 shell 命令（由 luo cmd 选入后记入 zsh 历史再调出；勿含 Tab）
 
 _luo_home() {
   print -r -- "${LUO_HOME:-$HOME/.luo}"
@@ -140,17 +140,27 @@ _luo_alias_file() {
 _luo_alias_load() {
   local f name
   f=$(_luo_alias_file)
-  # 先撤销上一次设置的函数（避免改名后旧函数残留）
+  # 先撤销上一次设置的快捷函数（避免改名后旧函数残留）
+  # 注意：若曾错误执行 luo alias luo，全局变量可能仍为 luo；此时绝不能 unfunction luo，
+  # 否则会删掉本文件刚定义的主入口 luo()（source 末尾顺序：先定义 luo，再调本函数）。
   if [[ -n ${_LUO_CURRENT_ALIAS:-} ]]; then
-    unfunction "${_LUO_CURRENT_ALIAS}" 2>/dev/null || :
+    if [[ ${_LUO_CURRENT_ALIAS} != luo ]]; then
+      unfunction "${_LUO_CURRENT_ALIAS}" 2>/dev/null || :
+    fi
     unset _LUO_CURRENT_ALIAS
   fi
   [[ -f $f ]] || return 0
   IFS= read -r name <"$f"
   name=${name//[[:space:]]/}
   [[ -n $name ]] || return 0
-  # 定义同名 zsh 函数，调用 luo help
-  eval "${name}() { luo help \"\$@\"; }"
+  # 旧版本曾允许 luo，会导致覆盖本文件定义的 luo 并 FUNCNEST；发现则自愈
+  if [[ $name == luo ]]; then
+    print -u2 "luo: ~/.luo/alias 中非法快捷名 'luo' 已忽略，并删除该文件（请改用 luo alias <其他名>）。"
+    command rm -f "$f"
+    return 0
+  fi
+  # 定义同名 zsh 函数，打开 fzf 选择器（与 luo cmd 同义）
+  eval "${name}() { luo cmd \"\$@\"; }"
   typeset -g _LUO_CURRENT_ALIAS=$name
 }
 
@@ -162,7 +172,7 @@ _luo_alias_cmd() {
   # 无参数：显示当前状态
   if [[ -z $name ]]; then
     if [[ -n ${_LUO_CURRENT_ALIAS:-} ]]; then
-      print -r -- "当前快捷命令: ${_LUO_CURRENT_ALIAS}  （等同于 luo help）"
+      print -r -- "当前快捷命令: ${_LUO_CURRENT_ALIAS}  （等同于 luo cmd）"
     else
       print -r -- "未设置快捷命令。用法: luo alias <命令名>  例: luo alias pp"
     fi
@@ -190,8 +200,14 @@ _luo_alias_cmd() {
     return 1
   fi
 
-  # 与系统命令冲突时警告（luo / builtin 本身除外）
-  if [[ $name != luo ]] && command -v "$name" >/dev/null 2>&1; then
+  # 禁止与主入口同名：否则会 eval 出 luo(){ luo cmd … } 覆盖本函数，导致 FUNCNEST 无限递归
+  if [[ $name == luo ]]; then
+    print -u2 "luo alias: 不能使用 'luo' 作为快捷名（会与主命令递归冲突）。请换其他短名，例如: luo alias pp"
+    return 1
+  fi
+
+  # 与系统命令冲突时警告
+  if command -v "$name" >/dev/null 2>&1; then
     print -u2 "luo alias: 警告：'$name' 已是系统中存在的命令。"
     if [[ -t 0 ]]; then
       read -q "?仍要覆盖？[y/N] " || { print ""; return 1; }
@@ -215,24 +231,32 @@ _luo_require_fzf() {
 }
 
 _luo_usage() {
-  print -r -- "用法:
-  luo help          交互选择（名称字母序；Tab 用当前项名称填搜索框缩小范围）
+  print -r -- "luo 子命令总览（与常见 CLI 一致：luo help = 本说明；打开已登记条目用 luo cmd）:
+
+  打印本页 — 本工具有哪些子命令（含 list / alias / add …）:
+    luo help          推荐（与 --help 语义一致）
+    luo usage / luo commands / luo -h / --help  同上
+    luo               无参数时默认打印本页
+
+  打开已登记 shell / 脚本的 fzf 选择器（名称字母序；Tab 用当前项名称缩小搜索；Enter 填回命令行）:
+    luo cmd           主入口（旧版曾用 luo help 表示此功能，现已拆分）
+    luo pick          与 luo cmd 完全同义（保留兼容）
                     按 Fn+F2（笔记本常见：须 Fn 才发出 F2）进入/退出「删除模式」（界面为绿色）；删除模式下 Enter 直接删当前项。
                     每次在普通模式下用 Enter 将命令填入命令行，并累计使用次数（见 usage.tsv）；
                     删除前若次数 >30 会交互确认（非交互终端则拒绝删除）。
   luo list          按名字母序列出（同样会先补全）
   luo add [选项] <一段文本…>  导入一条入口（见下方判定规则）
   luo sync [-p]     扫描 scripts/ 补全缺失；-p 删除失效 file 表项
-  luo rm / remove   直接进入 luo help 且初始为删除模式（不接受其它参数）
-  luo alias [名字]  设置 luo help 的快捷命令（如 pp）；luo alias 查看；luo alias off 取消
+  luo rm / remove   直接进入 luo cmd 且初始为删除模式（不接受其它参数）
+  luo alias [名字]  设置「luo cmd / pick」的快捷命令（如 pp）；luo alias 查看；luo alias off 取消
   luo home          打印 LUO_HOME
 
-命令行补全（zsh）：子命令名等（补全函数 _luo_cmd_complete）。~/.zshrc 须先 compinit 再 source 本文件；见文件末尾 precmd 兜底注册。
+命令行补全（zsh）：输入 luo <Tab> 可补全子命令。~/.zshrc 须先 compinit 再 source 本文件；见文件末尾 precmd 兜底注册。
 
 luo add 判定（剩余参数会拼成一段字符串，外层引号会剥掉一层）:
   · 若看起来像「脚本路径」且磁盘上存在该普通文件 → kind=file：在 scripts/ 建符号链接并登记
     条件：路径含 \"/\"，或以 \"./\" \"../\" 开头，且 [[ -f 解析后路径 ]]
-  · 否则 → kind=shell：整段字符串作为命令（由 luo help 记入历史后调出），不建链接
+  · 否则 → kind=shell：整段字符串作为命令（由 luo cmd 选入后记入历史再调出），不建链接
 
   无 \"/\" 的相对脚本请写成 ./foo.sh 再 luo add。
 
@@ -435,9 +459,9 @@ _luo_default_name_from_shell() {
   c=${c%% #}
   z=(${(z)c})
   w=$z[1]
-  [[ -z $w ]] && w="cmd"
+  [[ -z $w ]] && w="shell"
   w=${w//[^A-Za-z0-9_.-]/_}
-  [[ -z $w ]] && w="cmd"
+  [[ -z $w ]] && w="shell"
   print -r -- "$w"
 }
 
@@ -714,7 +738,7 @@ _luo_pick() {
       cnt=$(( cnt + 0 ))
       if (( cnt > 30 )); then
         if [[ -t 0 ]]; then
-          read -q "?该条目在 help 中已使用 ${cnt} 次（>30），确认删除？[y/N] " || {
+          read -q "?该条目在 cmd 选择器中已使用 ${cnt} 次（>30），确认删除？[y/N] " || {
             print ""
             continue
           }
@@ -760,9 +784,13 @@ _luo_pick() {
 luo() {
   local sub=${1:-}
   case $sub in
-    help | pick)
+    cmd | pick)
       shift
       _luo_pick "$@"
+      ;;
+    help | usage | commands)
+      shift
+      _luo_usage
       ;;
     list)
       shift
@@ -778,7 +806,7 @@ luo() {
       ;;
     remove | rm)
       if [[ -n ${2-} ]]; then
-        print -u2 "luo rm/remove: 不再接受名称参数；请执行: luo help，按 Fn+F2 进入删除模式"
+        print -u2 "luo rm/remove: 不再接受名称参数；请执行: luo cmd，按 Fn+F2 进入删除模式"
         return 1
       fi
       LUO_DELETE_START=1
@@ -791,7 +819,11 @@ luo() {
     home)
       _luo_home
       ;;
-    "" | -h | --help)
+    "" )
+      _luo_usage
+      ;;
+    -h | --help)
+      shift
       _luo_usage
       ;;
     *)
@@ -808,7 +840,7 @@ _luo_cmd_complete() {
   local sub
 
   if (( CURRENT == 2 )); then
-    compadd help list add sync remove rm alias home pick
+    compadd help usage commands cmd pick list add sync remove rm alias home
     return
   fi
 

@@ -57,8 +57,11 @@ luo add ./my-script.sh
 # 给条目起一个好记的名字
 luo add -n wake "caffeinate -di"
 
-# 打开交互选择菜单，回车后命令出现在命令行
+# 先看 luo 自带有哪些子命令（list、alias、add…）；与常见 CLI 一致也可用 luo help
 luo help
+
+# 打开已登记条目的 fzf 交互菜单，回车后命令出现在命令行
+luo cmd
 
 # 设置一个更短的快捷命令（例如 ql），以后直接 ql 即可
 luo alias ql
@@ -67,14 +70,18 @@ ql
 
 ## 命令一览
 
+**说明：** `luo help` 现为 **内置子命令说明**（与 `--help` 同义）。打开已登记条目的 fzf 请用 **`luo cmd`**（同义：`luo pick`）。若你用过旧版「`luo help` 打开 fzf」请改为 `luo cmd`。
+
 | 命令 | 说明 |
 |------|------|
-| `luo help` | fzf 交互菜单（字母序）；**Tab** 用当前名称缩小搜索范围；**Enter** 把命令填到命令行（可编辑后再回车执行）；**Fn+F2** 切换删除模式（绿色界面，Enter 直接删当前项）；**Ctrl+N** / **Esc** 退出 |
+| `luo` / `luo help` / `luo usage` / `luo commands` / `luo -h` / `--help` | 打印 **luo 工具自身的子命令说明** |
+| `luo cmd` | 对已登记条目打开 **fzf**（字母序）；**Tab** 缩小范围；**Enter** 把命令填到命令行；**Fn+F2** 切换删除模式；**Ctrl+N** / **Esc** 退出 |
+| `luo pick` | 与 `luo cmd` 完全相同 |
 | `luo add [选项] …` | 登记命令或脚本（见下文） |
 | `luo list` | 打印全部条目（带表头的 TSV） |
 | `luo sync [-p]` | 扫描 `scripts/` 补全缺失条目；`-p` 同时清理失效行 |
-| `luo rm` / `luo remove` | 等同于 `luo help` 但直接进入删除模式 |
-| `luo alias [名字]` | 设置 / 查看 / 取消 `luo help` 的快捷命令（见下文） |
+| `luo rm` / `luo remove` | 等同于 `luo cmd` 但直接进入删除模式 |
+| `luo alias [名字]` | 设置 / 查看 / 取消 `luo cmd` 的快捷命令（见下文） |
 | `luo home` | 打印当前 `LUO_HOME` |
 
 ### luo add 选项
@@ -97,10 +104,10 @@ luo add -f "npm run dev"            # 强制覆盖同名条目
 
 ### luo alias — 设置快捷命令
 
-不想每次输 `luo help`？给它起个任意不冲突的短名字：
+不想每次输 `luo cmd`？给它起个任意不冲突的短名字：
 
 ```bash
-luo alias ql        # 把 "ql" 设为 luo help 的快捷方式
+luo alias ql        # 把 "ql" 设为 luo cmd 的快捷方式
 ql                  # 直接打开交互菜单
 
 luo alias           # 查看当前设置的快捷命令
@@ -111,13 +118,13 @@ luo alias off       # 取消快捷命令
 
 > **注意**：若命令名与系统命令冲突，会警告并要求确认后再设置。
 
-### luo help 如何把命令填到命令行
+### luo cmd 如何把命令填到命令行
 
 选中后，命令通过 `print -z` 写入 **ZLE 行编辑缓冲**（在 `precmd` 钩子里调用，确保 fzf 已彻底退出、终端状态已还原）。命令出现在提示符后，你可以修改，确认无误再按 **Enter** 执行。
 
 ### 删除模式
 
-在 `luo help` 界面按 **Fn+F2**（Mac 笔记本 F 行默认为媒体键，需 Fn）进入绿色的删除模式：
+在 `luo cmd`（或 `luo pick`）界面按 **Fn+F2**（Mac 笔记本 F 行默认为媒体键，需 Fn）进入绿色的删除模式：
 
 - **Enter** — 删除当前选中条目（`kind=file` 时同时删除 `scripts/` 下的软链接）
 - 使用次数 **> 30** 的条目删除前会提示确认

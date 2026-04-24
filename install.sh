@@ -99,7 +99,8 @@ cat <<EOF
 
 ▶  快速上手：
      luo add "caffeinate -di"    # 登记一条 shell 命令
-     luo help                    # fzf 选命令，回车后出现在命令行
+     luo help                    # 查看 luo 子命令说明
+     luo cmd                     # fzf 选已登记命令，回车后出现在命令行
      luo add ./你的脚本.sh       # 登记一个脚本
 
 EOF

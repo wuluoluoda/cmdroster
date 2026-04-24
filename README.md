@@ -51,21 +51,26 @@ If `LUO_HOME` is not the default `~/.luo`, the installer adds `export LUO_HOME=�
 luo add "caffeinate -di"            # register a shell command
 luo add ./my-script.sh              # register a script (symlinked under ~/.luo/scripts/)
 luo add -n wake "caffeinate -di"    # custom display name
-luo help                            # open fuzzy picker; Enter puts the command on your line
-luo alias pp                        # set "pp" as a short alias for luo help
-pp                                  # same as luo help
+luo help                            # built-in subcommand list (same idea as --help)
+luo cmd                             # open fuzzy picker over saved entries; Enter puts the command on your line
+luo alias pp                        # set "pp" as a short alias for luo cmd
+pp                                  # same as luo cmd
 ```
 
 ## Commands
 
+**Note:** `luo help` is **built-in usage** (Unix-style). The fzf registry picker is **`luo cmd`** (synonym: `luo pick`). If you used an older layout where `luo help` opened fzf, switch those invocations to `luo cmd`.
+
 | Command | Description |
 |---------|-------------|
-| `luo help` | fzf picker (alphabetical); **Tab** narrows by name; **Enter** puts command on command line; **Fn+F2** toggles delete mode (green UI, **Enter** deletes); **Ctrl+N** / **Esc** quit |
+| `luo` / `luo help` / `luo usage` / `luo commands` / `luo -h` / `--help` | Print **this tool’s built-in subcommands** |
+| `luo cmd` | fzf picker over **your saved entries** (alphabetical); **Tab** narrows by name; **Enter** puts command on command line; **Fn+F2** toggles delete mode (green UI, **Enter** deletes); **Ctrl+N** / **Esc** quit |
+| `luo pick` | Same as `luo cmd` |
 | `luo add [options] …` | Register a command or script (see below) |
 | `luo list` | Print the full registry (TSV with header) |
 | `luo sync [-p]` | Merge unregistered files under `scripts/`; `-p` also prunes stale rows |
-| `luo rm` / `luo remove` | Same as `luo help` but opens directly in delete mode |
-| `luo alias [name]` | Set / view / clear a short alias for `luo help` (see below) |
+| `luo rm` / `luo remove` | Same as `luo cmd` but opens directly in delete mode |
+| `luo alias [name]` | Set / view / clear a short alias for `luo cmd` (see below) |
 | `luo home` | Print `LUO_HOME` |
 
 ### `luo add` options
@@ -78,12 +83,12 @@ pp                                  # same as luo help
 
 **Path detection**: if the argument contains `/` or starts with `./` / `../` and resolves to a file → registered as **file** (symlink created under `~/.luo/scripts/`). Otherwise the whole string is stored as a **shell** command.
 
-### `luo alias` — set a short alias for `luo help`
+### `luo alias` — set a short alias for `luo cmd`
 
-Tired of typing `luo help`? Pick any short name that doesn't conflict with system commands:
+Tired of typing `luo cmd`? Pick any short name that doesn't conflict with system commands:
 
 ```bash
-luo alias ql        # define "ql" as a shortcut for luo help
+luo alias ql        # define "ql" as a shortcut for luo cmd
 ql                  # opens the picker immediately
 
 luo alias           # show the current alias
@@ -94,7 +99,7 @@ The alias name is saved to `~/.luo/alias` and automatically restored every time 
 
 > **Note**: if the name already exists as a system command, you will be warned before the alias is created.
 
-### How `luo help` fills the command line
+### How `luo cmd` fills the command line
 
 After you pick an entry, the command is written to the **ZLE line buffer** (`print -z`) inside a `precmd` hook — after fzf has fully exited and the terminal is restored — so it appears on your prompt ready to edit or run.
 
